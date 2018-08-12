@@ -51,7 +51,7 @@ const uint8_t Joystick_DeviceDescriptor[JOYSTICK_SIZ_DEVICE_DESC] =
 	0x83,                       /*idVendor (0x0483)*/
 	0x04,
 	0x22,                       /*idProduct = 0x5722*/
-	0x57,
+	0xAB,
 	0x00,                       /*bcdDevice rel. 1.00*/
 	0x01,
 	1,                          /*Index of string descriptor describing

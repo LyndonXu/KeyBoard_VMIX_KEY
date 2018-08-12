@@ -17,7 +17,7 @@ u8 g_u8KeyTable[KEY_Y_CNT][KEY_X_CNT] =
 		_Key_Stream,
 	},	/* 1 */
 	{
-		_Key_QuickPlay2,
+		_Key_QuickPlay1,
 		_Key_QuickPlay3,
 		_Key_QuickPlay4,
 		_Key_Loop1,	
@@ -96,6 +96,7 @@ u8 g_u8KeyTable[KEY_Y_CNT][KEY_X_CNT] =
 	}, /* 10 */
 	
 	{
+		0, 0, 0, 0,
 		_Key_Dsk1,
 		_Key_Dsk2,
 		_Key_Dsk3,
@@ -103,6 +104,7 @@ u8 g_u8KeyTable[KEY_Y_CNT][KEY_X_CNT] =
 	}, /* 11 */
 	
 	{
+		0, 0, 0, 0,
 		_Key_FTB,
 		_Key_QuickPlay,
 		_Key_Effect_Ctrl_Cut,

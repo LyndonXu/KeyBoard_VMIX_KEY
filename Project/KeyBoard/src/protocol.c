@@ -1260,13 +1260,12 @@ static bool KeyBoardProcess(StKeyMixIn *pKeyIn)
 	{
 		u8 *pBuf;
 		StKeyState *pKeyState = pKeyIn->unKeyMixIn.stKeyState + i;
-		u8 u8KeyValue;
+		u8 u8KeyValue = pKeyState->u8KeyValue;
 		if (pKeyState->u8KeyState == KEY_KEEP)
 		{
-			continue;
+			if (u8KeyValue != _Key_PowerDown)
+				continue;
 		}
-
-		u8KeyValue = pKeyState->u8KeyValue;
 
 		pBuf = u8YNABuf;
 
@@ -1318,6 +1317,7 @@ static bool KeyBoardProcess(StKeyMixIn *pKeyIn)
 			{
 				pBuf[_YNA_Cmd] = 0x47;
 				pBuf[_YNA_Data2] = u8KeyValue - _Key_Recording + 0x50;					
+				break;
 			}
 			
 			
@@ -1375,6 +1375,24 @@ static bool KeyBoardProcess(StKeyMixIn *pKeyIn)
 				pBuf[_YNA_Data2] = u8KeyValue - _Key_Effect_Ctrl_Take;	
 				break;
 			}
+			case _Key_Overlay1:				
+			case _Key_Overlay2:
+			case _Key_Overlay3:
+			case _Key_Overlay4:
+			case _Key_Overlay5:
+			case _Key_Overlay6:
+			case _Key_Overlay7:
+			case _Key_Overlay8:
+			case _Key_Overlay9:
+			case _Key_Overlay10:
+			case _Key_Overlay11:
+			case _Key_Overlay12:		
+			{
+				pBuf[_YNA_Cmd] = 0x48;
+				pBuf[_YNA_Data2] = u8KeyValue - _Key_Overlay1 + 0x50;	
+				break;
+			}
+
 
 			case _Key_FTB:
 			{
@@ -1395,6 +1413,7 @@ static bool KeyBoardProcess(StKeyMixIn *pKeyIn)
 			{
 				pBuf[_YNA_Cmd] = 0x47;
 				pBuf[_YNA_Data2] = u8KeyValue - _Key_Dsk1 + 0x80;					
+				break;
 			}
 
 			case _Key_Play1:
@@ -1404,6 +1423,7 @@ static bool KeyBoardProcess(StKeyMixIn *pKeyIn)
 			{
 				pBuf[_YNA_Cmd] = 0x47;
 				pBuf[_YNA_Data2] = u8KeyValue - _Key_Play1 + 0x90;					
+				break;
 			}
 
 			case _Key_Transition1:
@@ -1418,12 +1438,39 @@ static bool KeyBoardProcess(StKeyMixIn *pKeyIn)
 			
 			case _Key_PowerDown:
 			{
-				/* disable after reset */
-				PWR_WakeUpPinCmd(ENABLE);
+				static u32 u32KeyDownTime = 0;
+				static bool boIsKeyDown = false;
+				if (pKeyState->u8KeyState == KEY_DOWN)
+				{
+					boIsKeyDown = true;
+					u32KeyDownTime = g_u32SysTickCnt;
+				}
+				else if (pKeyState->u8KeyState == KEY_KEEP)		
+				{
+					if (SysTimeDiff(u32KeyDownTime, g_u32SysTickCnt) > 2000)
+					{
+						ChangeAllLedState(false);						
+					}
+				}
+				else if (boIsKeyDown && SysTimeDiff(u32KeyDownTime, g_u32SysTickCnt) > 2000)
+				{
+					ChangeAllLedState(false);						
+					u32KeyDownTime = g_u32SysTickCnt;
+					while (SysTimeDiff(u32KeyDownTime, g_u32SysTickCnt) < 2000);
 				
-				/* Request to enter STANDBY mode (Wake Up flag is cleared in PWR_EnterSTANDBYMode function) */
-				PWR_EnterSTANDBYMode();
-				break;
+					RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA | 
+						RCC_APB2Periph_GPIOB | RCC_APB2Periph_GPIOC | 
+						RCC_APB2Periph_GPIOD | RCC_APB2Periph_GPIOE | 
+						RCC_APB2Periph_AFIO, DISABLE);
+					__disable_irq();
+					
+					/* disable after reset */
+					PWR_WakeUpPinCmd(ENABLE);
+					
+					/* Request to enter STANDBY mode (Wake Up flag is cleared in PWR_EnterSTANDBYMode function) */
+					PWR_EnterSTANDBYMode();
+				}
+				continue;
 			}
 
 			default:
@@ -1682,6 +1729,29 @@ static bool PushPodProcess(StKeyMixIn *pKeyIn)
 	pBuf[_YNA_Data2] = pKeyIn->unKeyMixIn.u32PushRodValue;
 	YNAGetCheckSum(pBuf);
 	CopyToUartMessage(pBuf, PROTOCOL_YNA_DECODE_LENGTH);
+	
+	{
+		u32 u32Value = 	pBuf[_YNA_Data2];
+		u32Value &= 0xFF;	
+
+		if (u32Value > ROCK_MAX_VALUE  * 2 / 3)
+		{
+			ChangeLedState(GET_XY(_T_PushPod2), true);
+			ChangeLedState(GET_XY(_T_PushPod1), false);
+		}
+		else if (u32Value < ROCK_MAX_VALUE / 3)
+		{
+			ChangeLedState(GET_XY(_T_PushPod2), false);
+			ChangeLedState(GET_XY(_T_PushPod1), true);		
+			
+		}
+		else
+		{
+			ChangeLedState(GET_XY(_T_PushPod2), true);
+			ChangeLedState(GET_XY(_T_PushPod1), true);
+		}
+
+	}
 	return true;
 }
 
@@ -1847,6 +1917,13 @@ static bool KeyBoardProcessForMIDI(StKeyMixIn *pKeyIn)
 	for (i = 0; i < pKeyIn->u32Cnt; i++)
 	{
 		StKeyState *pKeyState = pKeyIn->unKeyMixIn.stKeyState + i;
+		
+		if ((pKeyState->u8KeyValue >= _Key_Ctrl_Reserved_Inner1) ||
+			(pKeyState->u8KeyValue < _Key_Ctrl_Begin))
+		{
+			continue;			
+		}
+		
 		if (pKeyState->u8KeyState == KEY_KEEP)
 		{
 			continue;
@@ -2114,7 +2191,7 @@ bool PCEchoProcessYNA(StIOFIFO *pFIFO)
 				{
 					const u16 u16Led[] = 
 					{
-						_Key_QuickPlay1, _Key_QuickPlay2, _Key_QuickPlay3, _Key_QuickPlay4
+						_Led_QuickPlay1, _Led_QuickPlay2, _Led_QuickPlay3, _Led_QuickPlay4
 					};
 					ChangeLedStateWithBackgroundLight(GET_XY(u16Led[u8Led - 0x60]), boIsLight);						
 					break;
@@ -2124,7 +2201,7 @@ bool PCEchoProcessYNA(StIOFIFO *pFIFO)
 				{
 					const u16 u16Led[] = 
 					{
-						_Key_Loop1, _Key_Loop2, _Key_Loop3, _Key_Loop4
+						_Led_Loop1, _Led_Loop2, _Led_Loop3, _Led_Loop4
 					};
 					ChangeLedStateWithBackgroundLight(GET_XY(u16Led[u8Led - 0x70]), boIsLight);						
 					break;
@@ -2133,7 +2210,7 @@ bool PCEchoProcessYNA(StIOFIFO *pFIFO)
 				{
 					const u16 u16Led[] = 
 					{
-						_Key_Dsk1, _Key_Dsk2, _Key_Dsk3, _Key_Dsk4
+						_Led_Dsk1, _Led_Dsk2, _Led_Dsk3, _Led_Dsk4
 					};
 					ChangeLedStateWithBackgroundLight(GET_XY(u16Led[u8Led - 0x80]), boIsLight);						
 					break;
@@ -2142,7 +2219,7 @@ bool PCEchoProcessYNA(StIOFIFO *pFIFO)
 				{
 					const u16 u16Led[] = 
 					{
-						_Key_Play1, _Key_Play2, _Key_Play3, _Key_Play4
+						_Led_Play1, _Led_Play2, _Led_Play3, _Led_Play4
 					};
 					ChangeLedStateWithBackgroundLight(GET_XY(u16Led[u8Led - 0x90]), boIsLight);						
 					break;
@@ -2192,6 +2269,15 @@ bool PCEchoProcessYNA(StIOFIFO *pFIFO)
 					{
 						SetTallyPGM(pMsg[_YNA_Data2] - 0x02, boIsLight, true, true);
 						
+						{
+							u32 i;
+							for (i = 0; i < 8; i++)
+							{
+								ExternIOCtrl(i, Bit_RESET);
+							}
+						}
+	
+						
 						ExternIOCtrl(pMsg[_YNA_Data2] - 0x02, boIsLight ? Bit_SET : Bit_RESET);
 
 					}
@@ -2206,6 +2292,15 @@ bool PCEchoProcessYNA(StIOFIFO *pFIFO)
 					if (pMsg[_YNA_Data1] == 1)
 					{
 						SetTallyPVW(pMsg[_YNA_Data2] - 0x08, boIsLight, true, true);				
+						
+						{
+							u32 i;
+							for (i = 0; i < 8; i++)
+							{
+								ExternIOCtrl(i + 8, Bit_RESET);
+							}
+						}
+
 						ExternIOCtrl(pMsg[_YNA_Data2] - 0x08 + 8, boIsLight ? Bit_SET : Bit_RESET);
 					}
 					break;
@@ -2221,8 +2316,25 @@ bool PCEchoProcessYNA(StIOFIFO *pFIFO)
 				}					
 					
 				case 0x50: case 0x51: case 0x52: case 0x53:
-				case 0x54: case 0x55: 
+				case 0x54: case 0x55: case 0x56: case 0x57: 
+				case 0x58: case 0x59: case 0x5A: case 0x5B:
 				{
+					const u16 u16Led[] = 
+					{
+						_Led_Overlay1,				
+						_Led_Overlay2,
+						_Led_Overlay3,
+						_Led_Overlay4,
+						_Led_Overlay5,
+						_Led_Overlay6,
+						_Led_Overlay7,
+						_Led_Overlay8,
+						_Led_Overlay9,
+						_Led_Overlay10,
+						_Led_Overlay11,
+						_Led_Overlay12,		
+					};
+					ChangeLedStateWithBackgroundLight(GET_XY(u16Led[u8Led - 0x50]), boIsLight);
 					break;
 				}
 				case 0x60: case 0x61: case 0x62: case 0x63:
@@ -2248,6 +2360,15 @@ bool PCEchoProcessYNA(StIOFIFO *pFIFO)
 						if (u8Led <= 0x81)
 						{
 							SetTallyPGM(pMsg[_YNA_Data2] - 0x80 + 6, boIsLight, true, true);
+							
+							{
+								u32 i;
+								for (i = 0; i < 8; i++)
+								{
+									ExternIOCtrl(i, Bit_RESET);
+								}
+							}
+
 							ExternIOCtrl(pMsg[_YNA_Data2] - 0x80 + 6, boIsLight ? Bit_SET : Bit_RESET);
 						}
 					}
@@ -2263,6 +2384,14 @@ bool PCEchoProcessYNA(StIOFIFO *pFIFO)
 					{
 						if (u8Led <= 0x91)
 						{
+							
+							{
+								u32 i;
+								for (i = 0; i < 8; i++)
+								{
+									ExternIOCtrl(i + 8, Bit_RESET);
+								}
+							}
 							SetTallyPVW(pMsg[_YNA_Data2] - 0x90 + 6, boIsLight, true, true);
 							ExternIOCtrl(pMsg[_YNA_Data2] - 0x90 + 6 + 8, boIsLight ? Bit_SET : Bit_RESET);
 						}					
@@ -2289,6 +2418,11 @@ bool PCEchoProcessYNA(StIOFIFO *pFIFO)
 				}
 				case 0x07: 
 				{
+					break;
+				}
+				case 0x08: 
+				{
+					ChangeLedStateWithBackgroundLight(GET_XY(_Led_QuickPlay), boIsLight);
 					break;
 				}
 				default:
@@ -2325,6 +2459,7 @@ bool PCEchoProcessYNA(StIOFIFO *pFIFO)
 		}
 		case 0x80:
 		{
+		
 			break;
 		}
 		case 0xC0:
@@ -2425,6 +2560,7 @@ bool PCEchoProcessForMIDI(StIOFIFO *pFIFO)
 	{
 		return false;
 	}
+		
 	
 	u8Key = pMsg[2];
 	

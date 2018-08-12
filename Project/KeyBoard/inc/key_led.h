@@ -25,10 +25,10 @@ PW12:	PB14---->X
 */
 
 
-#define KEY_X_1				GPIO_Pin_4
-#define KEY_X_2				GPIO_Pin_5
-#define KEY_X_3				GPIO_Pin_6
-#define KEY_X_4				GPIO_Pin_7
+#define KEY_X_1				GPIO_Pin_8
+#define KEY_X_2				GPIO_Pin_9
+#define KEY_X_3				GPIO_Pin_10
+#define KEY_X_4				GPIO_Pin_11
 #define KEY_X_5				GPIO_Pin_12
 #define KEY_X_6				GPIO_Pin_13
 #define KEY_X_7				GPIO_Pin_14
@@ -36,10 +36,10 @@ PW12:	PB14---->X
 #define KEY_X_9				GPIO_Pin_0
 
 
-#define KEY_X_PORT_1		GPIOC
-#define KEY_X_PORT_2		GPIOC
-#define KEY_X_PORT_3		GPIOC
-#define KEY_X_PORT_4		GPIOC
+#define KEY_X_PORT_1		GPIOE
+#define KEY_X_PORT_2		GPIOE
+#define KEY_X_PORT_3		GPIOE
+#define KEY_X_PORT_4		GPIOE
 #define KEY_X_PORT_5		GPIOE
 #define KEY_X_PORT_6		GPIOE
 #define KEY_X_PORT_7		GPIOE
@@ -91,7 +91,7 @@ PW12:	PB14---->X
 #define KEY_LED_POWER_8		GPIO_Pin_12
 #define KEY_LED_POWER_9		GPIO_Pin_13
 #define KEY_LED_POWER_10	GPIO_Pin_14
-#define KEY_LED_POWER_11	GPIO_Pin_15
+#define KEY_LED_POWER_11	GPIO_Pin_8
 #define KEY_LED_POWER_12	GPIO_Pin_9
 
 #define KEY_LED_POWER_13	GPIO_Pin_9
@@ -116,7 +116,7 @@ PW12:	PB14---->X
 #define KEY_LED_POWER_PORT_8		GPIOB
 #define KEY_LED_POWER_PORT_9		GPIOB
 #define KEY_LED_POWER_PORT_10		GPIOB
-#define KEY_LED_POWER_PORT_11		GPIOB
+#define KEY_LED_POWER_PORT_11		GPIOC
 #define KEY_LED_POWER_PORT_12		GPIOC
 
 #define KEY_LED_POWER_PORT_13		GPIOD
@@ -131,6 +131,17 @@ PW12:	PB14---->X
 
 
 
+#if ((KEY_X_CNT <= 32) && (KEY_X_CNT > 16))
+typedef u32 StKeySize;
+#elif ((KEY_X_CNT <= 16) && (KEY_X_CNT > 8))
+typedef u16 StKeySize;
+#else
+typedef u8 StKeySize;
+#endif
+
+
+
+
 typedef struct _tagStKeyState
 {
 	u8 u8KeyValue;		/* 值 */
@@ -142,7 +153,7 @@ typedef struct _tagStKeyState
 
 typedef struct _tagStKeyValue
 {
-	u8 u8KeyValue[KEY_Y_CNT];	/* 所有按键的当前值 */
+	StKeySize stKeyValue[KEY_Y_CNT];	/* 所有按键的当前值 */
 }StKeyValue;
 
 typedef struct _tagStKeyScan

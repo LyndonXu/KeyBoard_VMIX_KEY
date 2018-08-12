@@ -68,6 +68,7 @@ static void BuzzerGPIOClose(void)
 void BuzzerInit(void)
 {
 	//BuzzerGPIOInit();
+	BuzzerGPIOClose();
 	BuzzerPWMInit();
 }
 

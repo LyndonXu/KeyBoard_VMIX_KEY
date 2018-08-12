@@ -169,7 +169,8 @@ static void KeyScanOnce(StKeyScan *pKey)
 	
 	for (i = 0; i < KEY_Y_CNT; i++)
 	{
-		u16 u16KeyValue, u16Tmp;
+		StKeySize stKeyValue;
+		u16 u16Tmp;
 		u32Real = c_u8KeyPowerUsedMap[i];
 		
 		for (j = 0; j < 20; j++);
@@ -187,7 +188,7 @@ static void KeyScanOnce(StKeyScan *pKey)
 		__NOP();
 		__NOP();
 		
-		u16KeyValue = 0;
+		stKeyValue = 0;
 		for (j = 0; j < KEY_X_CNT; j++)
 		{
 #if KEY_PIN_HAS_NULL
@@ -198,7 +199,7 @@ static void KeyScanOnce(StKeyScan *pKey)
 			}
 			u16Tmp = !!u16Tmp;
 
-			u16KeyValue |= (u16Tmp << j);
+			stKeyValue |= (u16Tmp << j);
 		}
 		
 #if POWER_PIN_HAS_NULL
@@ -208,7 +209,7 @@ static void KeyScanOnce(StKeyScan *pKey)
 			c_pKeyLedPowerPort[u32Real]->BSRR = c_u16KeyLedPowerPin[u32Real];
 		}
 
-		pKey->stKeyTmp[u32Cnt].u8KeyValue[i] = u16KeyValue & 0xFF;
+		pKey->stKeyTmp[u32Cnt].stKeyValue[i] = stKeyValue;
 	}
 	pKey->u32ScanCnt++;	
 }
@@ -223,7 +224,7 @@ static bool KeyCheckValue(StKeyValue *pKeyTmp, StKeyValue *pKeyOut)
 	{
 		for (j = 0; j < KEY_Y_CNT; j++)
 		{
-			if(pKeyTmp[i].u8KeyValue[j] != pKeyTmp[i + 1].u8KeyValue[j])
+			if(pKeyTmp[i].stKeyValue[j] != pKeyTmp[i + 1].stKeyValue[j])
 			{
 				s32NotSameCnt++;
 				break;
@@ -370,7 +371,7 @@ static u8 KeyGetValid(StKeyScan *pKey)
 	{
 		s32 i, j;
 		bool boHasKey = KeyCheckValue(pKey->stKeyTmp, &(pKey->stKeyNow));
-		u8 *pNow, *pOld;
+		StKeySize *pNow, *pOld;
 		StKeyState *pKeyState;
 		u8 u8KeyCnt;
 		if (!boHasKey)
@@ -378,25 +379,25 @@ static u8 KeyGetValid(StKeyScan *pKey)
 			return 0;
 		}
 		
-		pNow = pKey->stKeyNow.u8KeyValue;
-		pOld = pKey->stKeyOld.u8KeyValue;
+		pNow = pKey->stKeyNow.stKeyValue;
+		pOld = pKey->stKeyOld.stKeyValue;
 		pKeyState = pKey->stKeyState;
 		u8KeyCnt = 0;
 
 
 		for (i = 0; i < KEY_Y_CNT; i++)
 		{
-			u8 u8NotSame = 0;
-			u8 u8PressKeep = 0;
+			StKeySize stNotSame = 0;
+			StKeySize stPressKeep = 0;
 			
-			u8NotSame =  pNow[i] ^ pOld[i];
-			u8PressKeep = pNow[i] & pOld[i];
+			stNotSame =  pNow[i] ^ pOld[i];
+			stPressKeep = pNow[i] & pOld[i];
 
-			if (u8NotSame != 0)
+			if (stNotSame != 0)
 			{
 				for (j = 0; j < KEY_X_CNT; j++)
 				{
-					if ((u8NotSame & (1 << j)) != 0)
+					if ((stNotSame & (1 << j)) != 0)
 					{
 						if (u8KeyCnt >= KEY_MIX_MAX)
 						{
@@ -418,11 +419,11 @@ static u8 KeyGetValid(StKeyScan *pKey)
 				}	
 			}
 
-			if (u8PressKeep != 0)
+			if (stPressKeep != 0)
 			{
 				for (j = 0; j < KEY_X_CNT; j++)
 				{
-					if ((u8PressKeep & (1 << j)) != 0)
+					if ((stPressKeep & (1 << j)) != 0)
 					{
 						if (u8KeyCnt >= KEY_MIX_MAX)
 						{
@@ -448,7 +449,7 @@ end:
 			}
 		}
 #endif
-		memcpy(pOld, pNow, KEY_Y_CNT);
+		memcpy(pOld, pNow, KEY_Y_CNT * sizeof (StKeySize));
 		return u8KeyCnt;
 	}
 	else

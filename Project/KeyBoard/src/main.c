@@ -41,6 +41,10 @@ int main()
 	u32 u32RedressTime;
 
 	{
+
+		/* Enable PWR clock */
+		RCC_APB1PeriphClockCmd(RCC_APB1Periph_PWR, ENABLE);
+
 		if (PWR_GetFlagStatus(PWR_FLAG_SB) == SET)
 		{
 			PWR_ClearFlag(PWR_FLAG_SB);
@@ -48,6 +52,15 @@ int main()
 		if (PWR_GetFlagStatus(PWR_FLAG_WU) == SET)
 		{
 			PWR_ClearFlag(PWR_FLAG_WU);
+		}
+		else
+		{
+	
+			/* disable after reset */
+			PWR_WakeUpPinCmd(ENABLE);
+			
+			/* Request to enter STANDBY mode (Wake Up flag is cleared in PWR_EnterSTANDBYMode function) */
+			PWR_EnterSTANDBYMode();			
 		}
 		
 		PWR_WakeUpPinCmd(DISABLE);
@@ -150,6 +163,7 @@ int main()
 	ChangeAllLedState(false);
 	GlobalStateInit();
 	BackgroundLightEnable(true);
+	ChangeLedState(GET_XY(_Led_PowerDown), true);
 	do 
 	{
 		void *pFIFO = KeyBufGetBuf();
@@ -199,6 +213,7 @@ int main()
 		MessageUart3Release(pMsgIn3);	
 		MessageUSBRelease(pMsgUSB);	
 		
+		ExternIOFlush();
 		//FlushMsgForMIDI();
 	}
 }

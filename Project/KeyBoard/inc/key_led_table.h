@@ -103,8 +103,8 @@ enum
 
 enum 
 {
-	_Led_QuickPlay1 = LOC(1, 1),
-	_Led_QuickPlay2 = LOC(1, 2),
+	_Led_QuickPlay1 = LOC(1, 2),
+	_Led_QuickPlay2 = LOC(1, 1),
 	_Led_QuickPlay3 = LOC(3, 2),
 	_Led_QuickPlay4 = LOC(5, 2),
 	
@@ -182,8 +182,14 @@ enum
 	_Led_Transition1 = LOC(1, 10),
 	_Led_Transition2 = LOC(1, 9),
 	_Led_Transition3 = LOC(3, 10),
-	_Led_Transition4 = LOC(3, 9),	
+	_Led_Transition4 = LOC(3, 9),
+
+	_Led_PowerDown = LOC(5, 9),
+	_T_PushPod1 = LOC(7, 10),
+	_T_PushPod2 = LOC(8, 10),
 };
+
+
 
 #endif
 
