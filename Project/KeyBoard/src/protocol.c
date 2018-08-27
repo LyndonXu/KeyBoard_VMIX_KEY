@@ -2543,6 +2543,12 @@ bool PCEchoProcessForMIDI(StIOFIFO *pFIFO)
 	}
 
 	pMsg = (u8 *)pFIFO->pData;
+	
+	if ((pMsg[1] & 0x0F) != 0x00)
+	{
+		return false;
+	}
+
 	u8Cmd = (pMsg[1] & 0xF0);
 
 	if ( u8Cmd == 0x80)
