@@ -123,6 +123,11 @@ typedef enum _tagEmProtocol
 }EmProtocol;
 
 extern EmProtocol g_emProtocol;
+extern u8 g_u8MIDIChannel;
+
+#define DEFAULT_MAIN_PROTOCOL			_Protocol_YNA
+#define DEFAULT_MIDI_CHANNEL			0
+
 
 #define PRINT_MFC(x, ...)
 

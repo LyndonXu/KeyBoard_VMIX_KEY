@@ -451,6 +451,7 @@ typedef struct _tagStSave
 	u16 u16VolumeUpLimit;
 	u16 u16VolumeDownLimit;
 	u16 u16Protocol;
+	u16 u16MIDIChannel;
 	u16 u16CheckDum;
 }StSave;
 
@@ -484,9 +485,9 @@ void ReadSaveData(void)
 		g_u16VolumeTimes = stSave.u16VolumeTimes;
 		g_u16VolumeUpLimit = stSave.u16VolumeUpLimit;
 		g_u16VolumeDownLimit = stSave.u16VolumeDownLimit;
-		
 
 		g_emProtocol = (EmProtocol)stSave.u16Protocol;
+		g_u8MIDIChannel = stSave.u16MIDIChannel;
 		return;
 	}
 	
@@ -501,7 +502,8 @@ end:
 	g_u16VolumeDownLimit = VOLUME_BEGIN;
 	
 
-	g_emProtocol = _Protocol_YNA;
+	g_emProtocol = DEFAULT_MAIN_PROTOCOL;
+	g_u8MIDIChannel = DEFAULT_MIDI_CHANNEL;
 	
 }
 bool WriteSaveData(void)
@@ -524,6 +526,7 @@ bool WriteSaveData(void)
 	stSave.u16VolumeDownLimit = g_u16VolumeDownLimit;
 	
 	stSave.u16Protocol = g_emProtocol;
+	stSave.u16MIDIChannel = g_u8MIDIChannel;
 
 	
 	for (i = 0; i < CHECK_SIZE; i++)

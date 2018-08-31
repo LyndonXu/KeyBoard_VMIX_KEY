@@ -55,8 +55,11 @@ bool g_boIsDDRPlay = false;
 bool g_boIsRockAus = false;
 bool g_boIsRockEnable = true;
 
-EmProtocol g_emProtocol = _Protocol_YNA;
+EmProtocol g_emProtocol = DEFAULT_MAIN_PROTOCOL;
 bool g_boIsBackgroundLightEnable = true;
+u8 g_u8MIDIChannel = DEFAULT_MIDI_CHANNEL;
+
+
 
 const u16 g_u16CamLoc[CAM_ADDR_MAX] = 
 {
@@ -982,19 +985,94 @@ void SBGetCheckSum(u8 *pBuf)
 	pBuf[i] = u8Sum;
 }
 
+#define PS_MAX_SET	16
+enum
+{
+	_PS_Normal = 0,
+	_PS_MIDI_Channle,
+	
+	_PS_Reserved
+};
+
+enum
+{
+	_PS_Begin = 0x10,
+	_PS_Normal_Begin = 0x10,
+	_PS_Normal_Protocol_YNA = _PS_Normal_Begin,
+	_PS_Normal_Protocol_SB,
+	
+	_PS_Normal_Reserved,
+	_PS_Normal_Max = _PS_Normal_Begin + PS_MAX_SET - 1,
+	
+	_PS_MIDI_Begin = _PS_Normal_Max + 1,
+	_PS_MIDI_Channle_0 = _PS_MIDI_Begin,
+	_PS_MIDI_Channle_1,
+	_PS_MIDI_Channle_2,
+	_PS_MIDI_Channle_3,
+	_PS_MIDI_Channle_4,
+	_PS_MIDI_Channle_5,
+	_PS_MIDI_Channle_6,
+	_PS_MIDI_Channle_7,
+	_PS_MIDI_Channle_8,
+	_PS_MIDI_Channle_9,
+	_PS_MIDI_Channle_10,
+	_PS_MIDI_Channle_11,
+	_PS_MIDI_Channle_12,
+	_PS_MIDI_Channle_14,
+	_PS_MIDI_Channle_15,
+	_PS_MIDI_Reserved,
+	_PS_MIDI_Max = _PS_MIDI_Begin + PS_MAX_SET - 1,
+
+};
+
+#if _PS_Normal_Reserved > _PS_Normal_Max
+ #error "_PS_Normal_Reserved should not equal or big than _PS_Normal_Max"
+#endif
+
+#if _PS_MIDI_Reserved > _PS_MIDI_Max
+ #error "_PS_MIDI_Reserved should not equal or big than _PS_MIDI_Max"
+#endif
+
 bool ProtocolSelect(StIOFIFO *pFIFO)
 {
-	const u8 u8KeyMap[] = 
+	const u8 u8KeyMapTrigger[_PS_Reserved] = 
 	{
-		_Key_PGM_1, _Key_PGM_2
+		_Key_PVW_1, _Key_PGM_1,
 	};
-	const u16 u16LedMap[] = 
+	const u16 u16LedMapTrigger[_PS_Reserved] = 
 	{
-		_Led_PGM_1, _Led_PGM_2
+		_Led_PVW_1, _Led_PGM_1,
+	};
+
+	const u8 u8KeyMap[_PS_Reserved][PS_MAX_SET] = 
+	{
+		{
+			_Key_PGM_1, _Key_PGM_2,
+		},
+		{
+			_Key_PVW_1, _Key_PVW_2, _Key_PVW_3, _Key_PVW_4, 
+			_Key_PVW_5, _Key_PVW_6, _Key_PVW_7, _Key_PVW_8, 
+			_Key_PVW_9, _Key_PVW_10, _Key_PVW_11, _Key_PVW_12, 
+			_Key_Play1, _Key_Play2, _Key_Play3, _Key_Play4,		
+		},
+	};
+	const u16 u16LedMap[_PS_Reserved][PS_MAX_SET] = 
+	{
+		{ 
+			_Led_PGM_1, _Led_PGM_2,	
+		},
+		
+		{
+			_Led_PVW_1, _Led_PVW_2, _Led_PVW_3, _Led_PVW_4, 
+			_Led_PVW_5, _Led_PVW_6, _Led_PVW_7, _Led_PVW_8, 
+			_Led_PVW_9, _Led_PVW_10, _Led_PVW_11, _Led_PVW_12, 
+			_Led_Play1, _Led_Play2, _Led_Play3, _Led_Play4,		
+		},
 	};
 	
 	u32 u32MsgSentTime;
 	u32 u32State = 0;
+	u32 i, u32Mode;
 	StKeyMixIn *pKeyIn;
 	StKeyState *pKey;
 	
@@ -1015,9 +1093,20 @@ bool ProtocolSelect(StIOFIFO *pFIFO)
 	}
 	
 	pKey = &(pKeyIn->unKeyMixIn.stKeyState[0]);
-	if (pKey->u8KeyValue != (u8)_Key_PVW_1)
+	
+	u32Mode = ~0;
+	for (i = 0; i < _PS_Reserved; i++)
 	{
-		return false;		
+		if (pKey->u8KeyValue == u8KeyMapTrigger[i])
+		{
+			u32Mode = i;
+			break;			
+		}		
+	}
+	
+	if (u32Mode == ~0)
+	{
+		return false;
 	}
 
 
@@ -1031,13 +1120,13 @@ bool ProtocolSelect(StIOFIFO *pFIFO)
 			pKey = &(pKeyIn->unKeyMixIn.stKeyState[0]);
 			if (u32State == 0)
 			{
-				if (pKey->u8KeyValue == (u8)_Key_PVW_1)
+				if (pKey->u8KeyValue == u8KeyMapTrigger[u32Mode])
 				{
 					u32MsgSentTime = g_u32SysTickCnt;
 					if (pKey->u8KeyState == KEY_DOWN)
 					{
 						ChangeAllLedState(false);
-						ChangeLedState(GET_XY(_Led_PVW_1), true);
+						ChangeLedState(GET_XY(u16LedMapTrigger[u32Mode]), true);
 					}
 					else if (pKey->u8KeyState == KEY_UP)
 					{
@@ -1049,10 +1138,9 @@ bool ProtocolSelect(StIOFIFO *pFIFO)
 			else if (u32State == 1) /* get protocol or bandrate */
 			{
 				u32 u32Index = ~0;
-				u32 i;
-				for (i = 0; i < sizeof(u8KeyMap); i++)
+				for (i = 0; i < PS_MAX_SET; i++)
 				{
-					if (pKey->u8KeyValue == u8KeyMap[i])
+					if (pKey->u8KeyValue == u8KeyMap[u32Mode][i])
 					{
 						u32Index = i;
 						break;
@@ -1063,12 +1151,12 @@ bool ProtocolSelect(StIOFIFO *pFIFO)
 					u32MsgSentTime = g_u32SysTickCnt;
 					if (pKey->u8KeyState == KEY_DOWN)
 					{
-						ChangeLedState(GET_XY(u16LedMap[u32Index]), true);
+						ChangeLedState(GET_XY(u16LedMap[u32Mode][u32Index]), true);
 					}
 					else if (pKey->u8KeyState == KEY_UP)
 					{
-						ChangeLedState(GET_XY(u16LedMap[u32Index]), false);
-						u32State = 2 + u32Index;
+						ChangeLedState(GET_XY(u16LedMap[u32Mode][u32Index]), false);
+						u32State = (u32Mode + 1) * PS_MAX_SET + u32Index;
 						break;
 					}
 				}
@@ -1116,16 +1204,36 @@ bool ProtocolSelect(StIOFIFO *pFIFO)
 	{
 		switch (u32State)
 		{
-			case 2:
+			case _PS_Normal_Protocol_YNA:
 			{
 				g_emProtocol = _Protocol_YNA;
 				break;
 			}
-			case 3:
+			case _PS_Normal_Protocol_SB:
 			{
 				g_emProtocol = _Protocol_SB;
 				break;
 			}
+			case _PS_MIDI_Channle_0:
+			case _PS_MIDI_Channle_1:
+			case _PS_MIDI_Channle_2:
+			case _PS_MIDI_Channle_3:
+			case _PS_MIDI_Channle_4:
+			case _PS_MIDI_Channle_5:
+			case _PS_MIDI_Channle_6:
+			case _PS_MIDI_Channle_7:
+			case _PS_MIDI_Channle_8:
+			case _PS_MIDI_Channle_9:
+			case _PS_MIDI_Channle_10:
+			case _PS_MIDI_Channle_11:
+			case _PS_MIDI_Channle_12:
+			case _PS_MIDI_Channle_14:
+			case _PS_MIDI_Channle_15:
+			{
+				g_u8MIDIChannel = u32State - _PS_MIDI_Channle_0;
+				break;
+			}
+			
 			default:
 				break;
 		}
@@ -1931,6 +2039,9 @@ static bool KeyBoardProcessForMIDI(StKeyMixIn *pKeyIn)
 		else
 		{
 			u8 u8Midi[4] = {0x09, 0x90, 0x00, 0x7F};
+			
+			u8Midi[1] |= (g_u8MIDIChannel & 0x0F);
+			
 			if (pKeyState->u8KeyState == KEY_UP)
 			{
 				u8Midi[0] = 0x08; 
@@ -2024,6 +2135,9 @@ static bool PushPodProcessForMIDI(StKeyMixIn *pKeyIn)
 {
 	u8 u8Midi[4] = {0x0B, 0xB0, 0x0E};
 	u16 u16Value = pKeyIn->unKeyMixIn.u32PushRodValue;
+	
+	u8Midi[1] |= (g_u8MIDIChannel & 0x0F);
+
 	
 	u16Value = u16Value * 0x7F / PUSH_ROD_MAX_VALUE;
 	
@@ -2543,13 +2657,12 @@ bool PCEchoProcessForMIDI(StIOFIFO *pFIFO)
 	}
 
 	pMsg = (u8 *)pFIFO->pData;
-	
-	if ((pMsg[1] & 0x0F) != 0x00)
+	u8Cmd = (pMsg[1] & 0xF0);
+
+	if ((pMsg[1] & 0x0F) != g_u8MIDIChannel)
 	{
 		return false;
 	}
-
-	u8Cmd = (pMsg[1] & 0xF0);
 
 	if ( u8Cmd == 0x80)
 	{
