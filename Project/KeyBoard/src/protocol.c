@@ -2040,7 +2040,6 @@ static bool KeyBoardProcessForMIDI(StKeyMixIn *pKeyIn)
 		{
 			u8 u8Midi[4] = {0x09, 0x90, 0x00, 0x7F};
 			
-			u8Midi[1] |= (g_u8MIDIChannel & 0x0F);
 			
 			if (pKeyState->u8KeyState == KEY_UP)
 			{
@@ -2049,6 +2048,7 @@ static bool KeyBoardProcessForMIDI(StKeyMixIn *pKeyIn)
 				u8Midi[3] = 0;			
 			}
 
+			u8Midi[1] |= (g_u8MIDIChannel & 0x0F);
 			u8Midi[2] = pKeyState->u8KeyValue - _Key_Ctrl_Begin + MIDI_KEY_BEGIN;
 			
 			if (IsUSBDeviceConnect())
