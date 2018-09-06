@@ -1170,7 +1170,7 @@ bool ProtocolSelect(StIOFIFO *pFIFO)
 		if (SysTimeDiff(u32MsgSentTime, g_u32SysTickCnt) > 5000) /* 10S */
 		{
 			ChangeAllLedState(false);
-			return false;
+			return true;
 		}
 
 		
@@ -1185,13 +1185,19 @@ bool ProtocolSelect(StIOFIFO *pFIFO)
 		if (pKeyIn == NULL)
 		{
 			KeyBufGetEnd(pFIFO);
+
+			pFIFO = NULL;
+		
 			continue;
 		}
 
 		if (pKeyIn->emKeyType != _Key_Board)
 		{
-			pKeyIn = NULL;
 			KeyBufGetEnd(pFIFO);
+
+			pFIFO = NULL;
+			pKeyIn = NULL;
+		
 			continue;
 		}	
 	}

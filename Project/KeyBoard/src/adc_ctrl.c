@@ -678,7 +678,7 @@ bool RedressPushRodLimit (StIOFIFO *pFIFO)
 		if (SysTimeDiff(u32MsgSentTime, g_u32SysTickCnt) > 10000) /* 10S */
 		{
 			ChangeAllLedState(true);
-			return false;
+			return true;
 		}
 		
 		pFIFO = KeyBufGetBuf();
@@ -692,12 +692,15 @@ bool RedressPushRodLimit (StIOFIFO *pFIFO)
 		if (pKeyIn == NULL)
 		{
 			KeyBufGetEnd(pFIFO);
+			pFIFO = NULL;
 			continue;
 		}
 
 		if (pKeyIn->emKeyType != _Key_Board)
 		{
 			KeyBufGetEnd(pFIFO);
+			pFIFO = NULL;
+			pKeyIn = NULL;
 			continue;
 		}
 		pKey = &(pKeyIn->unKeyMixIn.stKeyState[0]);
@@ -738,6 +741,7 @@ bool RedressPushRodLimit (StIOFIFO *pFIFO)
 		KeyBufGetEnd(pFIFO);
 	}
 
+	KeyBufGetEnd(pFIFO);
 
 
 	if (PushRodGetTheRedressLimit(u16UpLimit, u16DownLimit))
