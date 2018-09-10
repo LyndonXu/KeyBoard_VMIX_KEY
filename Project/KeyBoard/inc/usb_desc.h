@@ -49,7 +49,7 @@
 #define JOYSTICK_SIZ_CONFIG_DESC                126
 #define JOYSTICK_SIZ_STRING_LANGID              4
 #define JOYSTICK_SIZ_STRING_VENDOR              26
-#define JOYSTICK_SIZ_STRING_PRODUCT             20
+#define JOYSTICK_SIZ_STRING_PRODUCT             42
 #define JOYSTICK_SIZ_STRING_SERIAL              24
 
 
