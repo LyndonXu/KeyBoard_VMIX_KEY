@@ -1260,7 +1260,7 @@ bool ProtocolSelect(StIOFIFO *pFIFO)
 			while (u32BlinkCnt < 10)
 			{
 				boBlink = !boBlink;
-				ChangeLedState(GET_XY(_Led_PVW_1), boBlink);
+				ChangeLedState(GET_XY(u16LedMapTrigger[u32Mode]), boBlink);
 				u32MsgSentTime = g_u32SysTickCnt;
 				while(SysTimeDiff(u32MsgSentTime, g_u32SysTickCnt) < 100);/* ÑÓÊ±1s */
 				u32BlinkCnt++;
